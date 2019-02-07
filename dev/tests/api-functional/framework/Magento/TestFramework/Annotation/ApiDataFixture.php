@@ -104,21 +104,13 @@ class ApiDataFixture
      */
     protected function _applyOneFixture($fixture)
     {
-        try {
+
             if (is_callable($fixture)) {
                 call_user_func($fixture);
             } else {
                 require $fixture;
             }
-        } catch (\Exception $e) {
-            throw new \Exception(
-                sprintf(
-                    "Exception occurred when running the %s fixture: \n%s",
-                    (\is_array($fixture) || is_scalar($fixture) ? json_encode($fixture) : 'callback'),
-                    $e->getMessage()
-                )
-            );
-        }
+
         $this->_appliedFixtures[] = $fixture;
     }
 
