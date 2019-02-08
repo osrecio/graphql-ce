@@ -76,6 +76,7 @@ class ApiDataFixture
     protected function _getFixtures($scope, \PHPUnit\Framework\TestCase $test)
     {
         $annotations = $test->getAnnotations();
+        echo $test->getName() . PHP_EOL;
         $result = [];
         if (!empty($annotations[$scope]['magentoApiDataFixture'])) {
             foreach ($annotations[$scope]['magentoApiDataFixture'] as $fixture) {
