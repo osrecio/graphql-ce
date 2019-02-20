@@ -9,7 +9,10 @@ namespace Magento\CustomerGraphQl\Model\Customer;
 
 use Magento\Customer\Api\CustomerRepositoryInterface;
 use Magento\Framework\Exception\AlreadyExistsException;
+use Magento\Framework\Exception\LocalizedException;
+use Magento\Framework\Exception\NoSuchEntityException;
 use Magento\Framework\GraphQl\Exception\GraphQlAlreadyExistsException;
+use Magento\Framework\GraphQl\Exception\GraphQlAuthenticationException;
 use Magento\Framework\GraphQl\Exception\GraphQlInputException;
 use Magento\Framework\GraphQl\Exception\GraphQlNoSuchEntityException;
 use Magento\Store\Model\StoreManagerInterface;
@@ -35,18 +38,34 @@ class UpdateCustomerData
     private $checkCustomerPassword;
 
     /**
+     * @var CustomerDataValidator
+     */
+    private $customerDataValiator;
+
+    /**
+     * @var MergeCustomerData
+     */
+    private $mergeCustomerData;
+
+    /**
      * @param CustomerRepositoryInterface $customerRepository
      * @param StoreManagerInterface $storeManager
      * @param CheckCustomerPassword $checkCustomerPassword
+     * @param CustomerDataValidator $customerDataValiator
+     * @param MergeCustomerData $mergeCustomerData
      */
     public function __construct(
         CustomerRepositoryInterface $customerRepository,
         StoreManagerInterface $storeManager,
-        CheckCustomerPassword $checkCustomerPassword
+        CheckCustomerPassword $checkCustomerPassword,
+        CustomerDataValidator $customerDataValiator,
+        MergeCustomerData $mergeCustomerData
     ) {
         $this->customerRepository = $customerRepository;
         $this->storeManager = $storeManager;
         $this->checkCustomerPassword = $checkCustomerPassword;
+        $this->customerDataValiator = $customerDataValiator;
+        $this->mergeCustomerData = $mergeCustomerData;
     }
 
     /**
@@ -58,18 +77,23 @@ class UpdateCustomerData
      * @throws GraphQlNoSuchEntityException
      * @throws GraphQlInputException
      * @throws GraphQlAlreadyExistsException
+     * @throws GraphQlAuthenticationException
      */
     public function execute(int $customerId, array $data): void
     {
-        $customer = $this->customerRepository->getById($customerId);
-
-        if (isset($data['firstname'])) {
-            $customer->setFirstname($data['firstname']);
+        try {
+            $customer = $this->customerRepository->getById($customerId);
+        } catch (NoSuchEntityException $e) {
+            throw new GraphQlNoSuchEntityException(__($e->getMessage()), $e);
+        } catch (LocalizedException $e) {
+            throw new GraphQlInputException(__($e->getMessage()), $e);
         }
 
-        if (isset($data['lastname'])) {
-            $customer->setLastname($data['lastname']);
+        $validationResult = $this->customerDataValiator->validate($data);
+        if ($validationResult !== true) {
+            throw new GraphQlInputException(__('Data validation error: %1', implode(', ', $validationResult)));
         }
+        $customer = $this->mergeCustomerData->execute($customer, $data);
 
         if (isset($data['email']) && $customer->getEmail() !== $data['email']) {
             if (!isset($data['password']) || empty($data['password'])) {
@@ -80,7 +104,11 @@ class UpdateCustomerData
             $customer->setEmail($data['email']);
         }
 
-        $customer->setStoreId($this->storeManager->getStore()->getId());
+        try {
+            $customer->setStoreId($this->storeManager->getStore()->getId());
+        } catch (NoSuchEntityException $e) {
+            throw new GraphQlNoSuchEntityException(__($e->getMessage()), $e);
+        }
 
         try {
             $this->customerRepository->save($customer);
@@ -89,6 +117,8 @@ class UpdateCustomerData
                 __('A customer with the same email address already exists in an associated website.'),
                 $e
             );
+        } catch (LocalizedException $e) {
+            throw new GraphQlInputException(__($e->getMessage()), $e);
         }
     }
 }
