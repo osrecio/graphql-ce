@@ -218,6 +218,8 @@ QUERY;
     }
 
     /**
+     * @magentoApiConfigFixture default/sendfriend/email/allow_guest 0
+     * @magentoApiConfigFixture default/sendfriend/email/enabled 1
      * @magentoApiDataFixture Magento/Catalog/_files/product_simple.php
      */
     public function testLimitMessagesPerHour()
