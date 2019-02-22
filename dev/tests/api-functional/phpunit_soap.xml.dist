@@ -86,9 +86,6 @@
                     <element key="magentoComponentsDir">
                         <string>magentoComponentsDir</string>
                     </element>
-                    <element key="magentoConfigFixture">
-                        <string>magentoConfigFixture</string>
-                    </element>
                     <element key="magentoDataFixture">
                         <string>magentoDataFixture</string>
                     </element>

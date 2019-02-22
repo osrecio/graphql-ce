@@ -219,8 +219,6 @@ QUERY;
 
     /**
      * @magentoApiDataFixture Magento/Catalog/_files/product_simple.php
-     * TODO: use magentoApiConfigFixture (to be merged https://github.com/magento/graphql-ce/pull/351)
-     * @magentoApiDataFixture Magento/SendFriend/Fixtures/sendfriend_configuration.php
      */
     public function testLimitMessagesPerHour()
     {
