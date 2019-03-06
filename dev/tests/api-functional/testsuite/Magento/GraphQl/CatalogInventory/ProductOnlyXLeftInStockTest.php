@@ -38,7 +38,7 @@ QUERY;
 
     /**
      * @magentoApiDataFixture Magento/Catalog/_files/product_simple_with_all_fields.php
-     * @magentoApiConfigFixture default_store cataloginventory/options/stock_threshold_qty 120
+     * @magentoConfigFixture default_store cataloginventory/options/stock_threshold_qty 120
      */
     public function testQueryProductOnlyXLeftInStockEnabled()
     {

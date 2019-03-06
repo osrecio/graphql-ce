@@ -102,9 +102,6 @@
                     <element key="magentoApiDataFixture">
                         <string>magentoApiDataFixture</string>
                     </element>
-                    <element key="magentoApiConfigFixture">
-                        <string>magentoApiConfigFixture</string>
-                    </element>
                     <element key="Override">
                         <string>Override</string>
                     </element>

@@ -51,7 +51,7 @@ QUERY;
 
     /**
      * @magentoApiDataFixture Magento/Catalog/_files/product_simple_with_all_fields.php
-     * @magentoApiConfigFixture default_store cataloginventory/options/show_out_of_stock 1
+     * @magentoConfigFixture default_store cataloginventory/options/show_out_of_stock 1
      */
     public function testQueryProductStockStatusOutOfStock()
     {
