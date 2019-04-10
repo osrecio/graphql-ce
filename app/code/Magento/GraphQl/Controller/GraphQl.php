@@ -18,6 +18,7 @@ use Magento\Framework\GraphQl\Schema\SchemaGeneratorInterface;
 use Magento\Framework\Serialize\SerializerInterface;
 use Magento\Framework\Webapi\Response;
 use Magento\Framework\GraphQl\Query\Fields as QueryFields;
+use Magento\GraphQl\Model\Query\Resolver\ContextFactory;
 
 /**
  * Front controller for web API GraphQL area.
@@ -52,6 +53,8 @@ class GraphQl implements FrontControllerInterface
     private $graphQlError;
 
     /**
+     * @deprecated
+     *
      * @var \Magento\Framework\GraphQl\Query\Resolver\ContextInterface
      */
     private $resolverContext;
@@ -67,14 +70,21 @@ class GraphQl implements FrontControllerInterface
     private $queryFields;
 
     /**
+     * @var ContextFactory
+     */
+    private $contextFactory;
+
+    /**
+     * GraphQl constructor.
      * @param Response $response
      * @param SchemaGeneratorInterface $schemaGenerator
      * @param SerializerInterface $jsonSerializer
      * @param QueryProcessor $queryProcessor
-     * @param \Magento\Framework\GraphQl\Exception\ExceptionFormatter $graphQlError
-     * @param \Magento\Framework\GraphQl\Query\Resolver\ContextInterface $resolverContext
+     * @param ExceptionFormatter $graphQlError
+     * @param ContextInterface $resolverContext
      * @param HttpRequestProcessor $requestProcessor
      * @param QueryFields $queryFields
+     * @param ContextFactory $contextFactory
      */
     public function __construct(
         Response $response,
@@ -84,7 +94,8 @@ class GraphQl implements FrontControllerInterface
         ExceptionFormatter $graphQlError,
         ContextInterface $resolverContext,
         HttpRequestProcessor $requestProcessor,
-        QueryFields $queryFields
+        QueryFields $queryFields,
+        ContextFactory $contextFactory
     ) {
         $this->response = $response;
         $this->schemaGenerator = $schemaGenerator;
@@ -94,6 +105,7 @@ class GraphQl implements FrontControllerInterface
         $this->resolverContext = $resolverContext;
         $this->requestProcessor = $requestProcessor;
         $this->queryFields = $queryFields;
+        $this->contextFactory = $contextFactory;
     }
 
     /**
@@ -101,6 +113,7 @@ class GraphQl implements FrontControllerInterface
      *
      * @param RequestInterface $request
      * @return ResponseInterface
+     * @throws \Throwable
      */
     public function dispatch(RequestInterface $request) : ResponseInterface
     {
@@ -120,7 +133,7 @@ class GraphQl implements FrontControllerInterface
             $result = $this->queryProcessor->process(
                 $schema,
                 $query,
-                $this->resolverContext,
+                $this->contextFactory->create(),
                 isset($data['variables']) ? $data['variables'] : []
             );
         } catch (\Exception $error) {

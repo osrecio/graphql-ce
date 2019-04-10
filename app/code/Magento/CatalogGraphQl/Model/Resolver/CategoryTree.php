@@ -7,78 +7,65 @@ declare(strict_types=1);
 
 namespace Magento\CatalogGraphQl\Model\Resolver;
 
-use Magento\CatalogGraphQl\Model\Resolver\Products\DataProvider\ExtractDataFromCategoryTree;
-use Magento\Framework\GraphQl\Schema\Type\ResolveInfo;
 use Magento\Framework\GraphQl\Config\Element\Field;
-use Magento\Framework\GraphQl\Exception\GraphQlInputException;
-use Magento\Framework\GraphQl\Exception\GraphQlNoSuchEntityException;
+use Magento\Framework\GraphQl\Query\Resolver\ContextInterface;
+use Magento\Framework\GraphQl\Query\Resolver\Value;
+use Magento\Framework\GraphQl\Query\Resolver\ValueFactory;
 use Magento\Framework\GraphQl\Query\ResolverInterface;
+use Magento\Framework\GraphQl\Schema\Type\ResolveInfo;
+use Magento\GraphQl\Model\Query\Resolver\DummyDataProvider;
+use Magento\GraphQl\Model\Query\Resolver\RequestRepository;
 
 /**
- * Category tree field resolver, used for GraphQL request processing.
+ * Class CategoryTree
  */
 class CategoryTree implements ResolverInterface
 {
     /**
-     * Name of type in GraphQL
+     * @var ValueFactory
      */
-    const CATEGORY_INTERFACE = 'CategoryInterface';
+    private $valueFactory;
 
     /**
-     * @var \Magento\CatalogGraphQl\Model\Resolver\Products\DataProvider\CategoryTree
-     */
-    private $categoryTree;
-
-    /**
-     * @var ExtractDataFromCategoryTree
-     */
-    private $extractDataFromCategoryTree;
-
-    /**
-     * @param \Magento\CatalogGraphQl\Model\Resolver\Products\DataProvider\CategoryTree $categoryTree
-     * @param ExtractDataFromCategoryTree $extractDataFromCategoryTree
+     * CategoryTree constructor.
+     * @param ValueFactory $valueFactory
      */
     public function __construct(
-        \Magento\CatalogGraphQl\Model\Resolver\Products\DataProvider\CategoryTree $categoryTree,
-        ExtractDataFromCategoryTree $extractDataFromCategoryTree
+        ValueFactory $valueFactory
     ) {
-        $this->categoryTree = $categoryTree;
-        $this->extractDataFromCategoryTree = $extractDataFromCategoryTree;
+        $this->valueFactory = $valueFactory;
     }
 
     /**
-     * Get category id
-     *
-     * @param array $args
-     * @return int
-     * @throws GraphQlInputException
-     */
-    private function getCategoryId(array $args) : int
-    {
-        if (!isset($args['id'])) {
-            throw new GraphQlInputException(__('"id for category should be specified'));
-        }
-
-        return (int)$args['id'];
-    }
-
-    /**
-     * @inheritdoc
+     * @param Field $field
+     * @param ContextInterface $context
+     * @param ResolveInfo $info
+     * @param array|null $value
+     * @param array|null $args
+     * @return Value|mixed|null
      */
     public function resolve(Field $field, $context, ResolveInfo $info, array $value = null, array $args = null)
     {
-        if (isset($value[$field->getName()])) {
-            return $value[$field->getName()];
+        if (!isset($args['id'])) {
+            return null;
         }
-
-        $rootCategoryId = $this->getCategoryId($args);
-        $categoriesTree = $this->categoryTree->getTree($info, $rootCategoryId);
-
-        if (empty($categoriesTree) || ($categoriesTree->count() == 0)) {
-            throw new GraphQlNoSuchEntityException(__('Category doesn\'t exist'));
-        }
-
-        $result = $this->extractDataFromCategoryTree->execute($categoriesTree);
-        return current($result);
+        $queryIdentifier = uniqid('request-', true);
+        /** @var \Magento\Framework\GraphQl\Query\Resolver\ContextInterface $requestRepository */
+        $requestRepository = $context->getExtensionAttributes()->getRequestRepository();
+        $attributes = array_keys($info->getFieldSelection());
+        /** @var RequestRepository $requestRepository*/
+        $requestRepository->registerRequest(
+            $queryIdentifier,
+            DummyDataProvider::class,
+            [
+                'categoryId' => $args['id'],
+                'attributeCodes' => $attributes,
+                'includeChildren' => in_array('children', $attributes)
+            ]
+        );
+        $result = function () use ($queryIdentifier, $requestRepository) {
+            return $requestRepository->getRequestedData($queryIdentifier);
+        };
+        return $this->valueFactory->create($result);
     }
 }
