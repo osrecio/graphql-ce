@@ -8,13 +8,11 @@ declare(strict_types=1);
 namespace Magento\CatalogGraphQl\Model\Resolver;
 
 use Magento\Framework\GraphQl\Config\Element\Field;
-use Magento\Framework\GraphQl\Query\Resolver\ContextInterface;
-use Magento\Framework\GraphQl\Query\Resolver\Value;
 use Magento\Framework\GraphQl\Query\Resolver\ValueFactory;
 use Magento\Framework\GraphQl\Query\ResolverInterface;
 use Magento\Framework\GraphQl\Schema\Type\ResolveInfo;
-use Magento\GraphQl\Model\Query\Resolver\DummyDataProvider;
 use Magento\GraphQl\Model\Query\Resolver\RequestRepository;
+use Magento\CatalogGraphQl\Model\Resolver\CategoryTree\DataProvider\CategoryTree as CategoryTreeDataProvider;
 
 /**
  * Class CategoryTree
@@ -37,12 +35,7 @@ class CategoryTree implements ResolverInterface
     }
 
     /**
-     * @param Field $field
-     * @param ContextInterface $context
-     * @param ResolveInfo $info
-     * @param array|null $value
-     * @param array|null $args
-     * @return Value|mixed|null
+     * @inheritdoc
      */
     public function resolve(Field $field, $context, ResolveInfo $info, array $value = null, array $args = null)
     {
@@ -56,11 +49,11 @@ class CategoryTree implements ResolverInterface
         /** @var RequestRepository $requestRepository*/
         $requestRepository->registerRequest(
             $queryIdentifier,
-            DummyDataProvider::class,
+            CategoryTreeDataProvider::class,
             [
                 'categoryId' => $args['id'],
                 'attributeCodes' => $attributes,
-                'includeChildren' => in_array('children', $attributes)
+                'includeChildren' => \in_array('children', $attributes, true)
             ]
         );
         $result = function () use ($queryIdentifier, $requestRepository) {

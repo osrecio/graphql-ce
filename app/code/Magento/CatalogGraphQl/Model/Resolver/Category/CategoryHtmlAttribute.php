@@ -7,8 +7,6 @@ declare(strict_types=1);
 
 namespace Magento\CatalogGraphQl\Model\Resolver\Category;
 
-use Magento\Catalog\Model\Category;
-use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\GraphQl\Config\Element\Field;
 use Magento\Framework\GraphQl\Query\ResolverInterface;
 use Magento\Framework\GraphQl\Schema\Type\ResolveInfo;
@@ -43,15 +41,12 @@ class CategoryHtmlAttribute implements ResolverInterface
         array $value = null,
         array $args = null
     ) {
-        if (!isset($value['model'])) {
-            throw new LocalizedException(__('"model" value should be specified'));
-        }
-
-        /* @var $category Category */
-        $category = $value['model'];
         $fieldName = $field->getName();
-        $renderedValue = $this->outputHelper->categoryAttribute($category, $category->getData($fieldName), $fieldName);
+        $description = $value[$fieldName] ?? null;
 
-        return $renderedValue;
+        // TODO: handle attribute output
+        // $renderedValue = $this->outputHelper->categoryAttribute(null, $description, $fieldName);
+
+        return $description;
     }
 }

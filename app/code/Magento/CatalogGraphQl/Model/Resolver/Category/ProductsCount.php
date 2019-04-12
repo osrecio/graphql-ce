@@ -7,14 +7,12 @@ declare(strict_types=1);
 
 namespace Magento\CatalogGraphQl\Model\Resolver\Category;
 
-use Magento\Catalog\Model\Category;
-use Magento\Catalog\Model\Product\Visibility;
-use Magento\CatalogGraphQl\Model\Resolver\Products\DataProvider\Product\CollectionProcessor\StockProcessor;
-use Magento\Framework\Api\SearchCriteriaInterface;
-use Magento\Framework\GraphQl\Exception\GraphQlInputException;
+use Magento\CatalogGraphQl\Model\Resolver\Category\DataProvider\ProductsCount as ProductsCountDataProvider;
+use Magento\Framework\GraphQl\Query\Resolver\ValueFactory;
 use Magento\Framework\GraphQl\Schema\Type\ResolveInfo;
 use Magento\Framework\GraphQl\Config\Element\Field;
 use Magento\Framework\GraphQl\Query\ResolverInterface;
+use Magento\GraphQl\Model\Query\Resolver\RequestRepository;
 
 /**
  * Retrieves products count for a category
@@ -22,33 +20,18 @@ use Magento\Framework\GraphQl\Query\ResolverInterface;
 class ProductsCount implements ResolverInterface
 {
     /**
-     * @var Visibility
+     * @var ValueFactory
      */
-    private $catalogProductVisibility;
+    private $valueFactory;
 
     /**
-     * @var StockProcessor
-     */
-    private $stockProcessor;
-
-    /**
-     * @var SearchCriteriaInterface
-     */
-    private $searchCriteria;
-
-    /**
-     * @param Visibility $catalogProductVisibility
-     * @param SearchCriteriaInterface $searchCriteria
-     * @param StockProcessor $stockProcessor
+     * ProductsCount constructor.
+     * @param ValueFactory $valueFactory
      */
     public function __construct(
-        Visibility $catalogProductVisibility,
-        SearchCriteriaInterface $searchCriteria,
-        StockProcessor $stockProcessor
+        ValueFactory $valueFactory
     ) {
-        $this->catalogProductVisibility = $catalogProductVisibility;
-        $this->searchCriteria = $searchCriteria;
-        $this->stockProcessor = $stockProcessor;
+        $this->valueFactory = $valueFactory;
     }
 
     /**
@@ -56,15 +39,21 @@ class ProductsCount implements ResolverInterface
      */
     public function resolve(Field $field, $context, ResolveInfo $info, array $value = null, array $args = null)
     {
-        if (!isset($value['model'])) {
-            throw new GraphQlInputException(__('"model" value should be specified'));
-        }
-        /** @var Category $category */
-        $category = $value['model'];
-        $productsCollection = $category->getProductCollection();
-        $productsCollection->setVisibility($this->catalogProductVisibility->getVisibleInSiteIds());
-        $productsCollection = $this->stockProcessor->process($productsCollection, $this->searchCriteria, []);
+        $queryIdentifier = uniqid('request-', true);
+        /** @var \Magento\Framework\GraphQl\Query\Resolver\ContextInterface $requestRepository */
+        $requestRepository = $context->getExtensionAttributes()->getRequestRepository();
 
-        return $productsCollection->getSize();
+        /** @var RequestRepository $requestRepository*/
+        $requestRepository->registerRequest(
+            $queryIdentifier,
+            ProductsCountDataProvider::class,
+            [
+                'categoryId' => $value['entity_id'],
+            ]
+        );
+        $result = function () use ($queryIdentifier, $requestRepository) {
+            return $requestRepository->getRequestedData($queryIdentifier);
+        };
+        return $this->valueFactory->create($result);
     }
 }

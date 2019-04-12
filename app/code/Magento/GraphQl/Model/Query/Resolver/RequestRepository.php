@@ -54,10 +54,14 @@ class RequestRepository
     }
 
     /**
+     * Get data for specified request.
+     * Return mixed type: array for "parent" resolver
+     * and array OR scalar type for "child" resolver (e.g. product count for category)
+     *
      * @param string $queryIdentifier
-     * @return array|null
+     * @return mixed
      */
-    public function getRequestedData(string $queryIdentifier) : ?array
+    public function getRequestedData(string $queryIdentifier)
     {
         if (!isset($this->data[$queryIdentifier])) {
             $this->fetchProvider($this->requestProviders[$queryIdentifier]);
