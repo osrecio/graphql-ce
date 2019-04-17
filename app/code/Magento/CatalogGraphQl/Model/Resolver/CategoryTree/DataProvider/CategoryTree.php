@@ -47,6 +47,7 @@ class CategoryTree implements DataProviderInterface
             $output[$requestIdentifier] = $this->getCategoryTree(
                 $request['categoryId'],
                 $request['attributeCodes'],
+                $request['storeId'],
                 $request['includeChildren']
             );
         }
@@ -56,17 +57,17 @@ class CategoryTree implements DataProviderInterface
     /**
      * @param int $categoryId
      * @param array $attributeCodes
+     * @param int $storeId
      * @param bool $includeChildren
      * @return array
      * @throws GraphQlNoSuchEntityException
      * @throws \Zend_Db_Select_Exception
      * @throws \Zend_Db_Statement_Exception
-     * @throws \Zend_Db_Select_Exception
      */
-    private function getCategoryTree(int $categoryId, array $attributeCodes, bool $includeChildren = false): array
+    private function getCategoryTree(int $categoryId, array $attributeCodes, int $storeId, bool $includeChildren = false): array
     {
         $categories = [];
-        $entities = $this->category->getCategoryData($categoryId, $includeChildren);
+        $entities = $this->category->getCategoryData($categoryId, $storeId, $includeChildren);
         if (empty($entities)) {
             throw new GraphQlNoSuchEntityException(__('Category doesn\'t exist'));
         }
@@ -75,14 +76,16 @@ class CategoryTree implements DataProviderInterface
             $entityIds[] = $entity['entity_id'];
         }
         $attributes = $this->categoryAttribute->getAttributesData($entityIds, $attributeCodes);
+
         foreach ($entities as $entity) {
             $thread = null;
             $path = explode('/', $entity['relevant_path']);
             $path = array_reverse($path);
             foreach ($path as $node) {
                 if ($thread === null) {
-                    $data = array_replace_recursive($entity, $attributes[$entity['entity_id']]);
+                    $data = array_replace_recursive($entity, $attributes[$entity['entity_id']] ?? []);
                     $data['id'] = $data['entity_id'];
+                    $data['children'] = [];
                     $thread['children'] = [$node => $data];
                 } else {
                     $thread['children'] = [$node => $thread];

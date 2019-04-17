@@ -14,6 +14,7 @@ use Magento\Framework\GraphQl\Schema\Type\ResolveInfo;
 use Magento\GraphQl\Model\Query\Resolver\FieldResolver;
 use Magento\GraphQl\Model\Query\Resolver\RequestRepository;
 use Magento\CatalogGraphQl\Model\Resolver\CategoryTree\DataProvider\CategoryTree as CategoryTreeDataProvider;
+use Magento\Store\Model\StoreManagerInterface;
 
 /**
  * Class CategoryTree
@@ -31,15 +32,23 @@ class CategoryTree implements ResolverInterface
     private $fieldResolver;
 
     /**
+     * @var StoreManagerInterface
+     */
+    private $storeManager;
+
+    /**
      * @param ValueFactory $valueFactory
      * @param FieldResolver $fieldResolver
+     * @param StoreManagerInterface $storeManager
      */
     public function __construct(
         ValueFactory $valueFactory,
-        FieldResolver $fieldResolver
+        FieldResolver $fieldResolver,
+        StoreManagerInterface $storeManager
     ) {
         $this->valueFactory = $valueFactory;
         $this->fieldResolver = $fieldResolver;
+        $this->storeManager = $storeManager;
     }
 
     /**
@@ -61,7 +70,9 @@ class CategoryTree implements ResolverInterface
             [
                 'categoryId' => $args['id'],
                 'attributeCodes' => $attributes,
-                'includeChildren' => \in_array('children', $attributes, true)
+                'includeChildren' => \in_array('children', $attributes, true),
+                // store id should be received from context
+                'storeId' => (int)$this->storeManager->getStore()->getId()
             ]
         );
         $result = function () use ($queryIdentifier, $requestRepository) {
