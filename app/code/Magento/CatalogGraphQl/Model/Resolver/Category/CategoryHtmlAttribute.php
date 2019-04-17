@@ -44,9 +44,6 @@ class CategoryHtmlAttribute implements ResolverInterface
         $fieldName = $field->getName();
         $description = $value[$fieldName] ?? null;
 
-        // TODO: handle attribute output
-        // $renderedValue = $this->outputHelper->categoryAttribute(null, $description, $fieldName);
-
-        return $description;
+        return $this->outputHelper->categoryAttribute(null, $description, $fieldName);
     }
 }
