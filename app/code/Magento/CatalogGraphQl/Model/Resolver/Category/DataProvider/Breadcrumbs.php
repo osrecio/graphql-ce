@@ -60,6 +60,30 @@ class Breadcrumbs implements DataProviderInterface
 
         $entityIds = \array_unique(\array_merge(...$entityIds));
 
+        $categories = $this->getCategories($entityIds);
+
+        $output = [];
+        foreach ($requests as $requestIdentifier => $request) {
+            $output[$requestIdentifier] =  $categories[$pathMap[$request['path']]] ?? [];
+        }
+
+        return $output;
+    }
+
+    /**
+     * @param array $entityIds
+     * @return array
+     * @throws \Magento\Framework\Exception\LocalizedException
+     * @throws \Zend_Db_Select_Exception
+     * @throws \Zend_Db_Statement_Exception
+     */
+    private function getCategories(array $entityIds): array
+    {
+        $categories = [];
+        if (!$entityIds) {
+            return $categories;
+        }
+
         $select = $this->categoryAttributeQuery->getQuery($entityIds, ['name', 'url_key']);
         $union = $select->getPart(Select::SQL_UNION);
         foreach ($union as $partialSelect) {
@@ -75,7 +99,6 @@ class Breadcrumbs implements DataProviderInterface
             $entities[$row['entity_id']]['category_level'] = $row['level'];
         }
 
-        $categories = [];
         foreach ($entities as $entity) {
             $thread = [];
             $path = \explode('/', $entity['category_path']);
@@ -86,11 +109,6 @@ class Breadcrumbs implements DataProviderInterface
             $categories[$entity['category_path']] = $thread;
         }
 
-        $output = [];
-        foreach ($requests as $requestIdentifier => $request) {
-            $output[$requestIdentifier] =  $categories[$pathMap[$request['path']]] ?? null;
-        }
-
-        return $output;
+        return $categories;
     }
 }

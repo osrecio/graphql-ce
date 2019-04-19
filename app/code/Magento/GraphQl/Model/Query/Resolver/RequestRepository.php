@@ -63,7 +63,7 @@ class RequestRepository
      */
     public function getRequestedData(string $queryIdentifier)
     {
-        if (!isset($this->data[$queryIdentifier])) {
+        if (!\array_key_exists($queryIdentifier, $this->data)) {
             $this->fetchProvider($this->requestProviders[$queryIdentifier]);
         }
         return $this->data[$queryIdentifier];
