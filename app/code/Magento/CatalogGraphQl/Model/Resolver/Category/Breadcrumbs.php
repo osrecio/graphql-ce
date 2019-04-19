@@ -12,6 +12,8 @@ use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\GraphQl\Schema\Type\ResolveInfo;
 use Magento\Framework\GraphQl\Config\Element\Field;
 use Magento\Framework\GraphQl\Query\ResolverInterface;
+use Magento\Framework\GraphQl\Query\Resolver\ValueFactory;
+use Magento\GraphQl\Model\Query\Resolver\RequestRepository;
 
 /**
  * Retrieves breadcrumbs
@@ -19,17 +21,17 @@ use Magento\Framework\GraphQl\Query\ResolverInterface;
 class Breadcrumbs implements ResolverInterface
 {
     /**
-     * @var BreadcrumbsDataProvider
+     * @var ValueFactory
      */
-    private $breadcrumbsDataProvider;
+    private $valueFactory;
 
     /**
-     * @param BreadcrumbsDataProvider $breadcrumbsDataProvider
+     * @param ValueFactory $valueFactory
      */
     public function __construct(
-        BreadcrumbsDataProvider $breadcrumbsDataProvider
+        ValueFactory $valueFactory
     ) {
-        $this->breadcrumbsDataProvider = $breadcrumbsDataProvider;
+        $this->valueFactory = $valueFactory;
     }
 
     /**
@@ -41,7 +43,20 @@ class Breadcrumbs implements ResolverInterface
             throw new LocalizedException(__('"path" value should be specified'));
         }
 
-        $breadcrumbsData = $this->breadcrumbsDataProvider->getData($value['path']);
-        return count($breadcrumbsData) ? $breadcrumbsData : null;
+        $queryIdentifier = uniqid('request-', true);
+        /** @var \Magento\Framework\GraphQl\Query\Resolver\ContextInterface $requestRepository */
+        $requestRepository = $context->getExtensionAttributes()->getRequestRepository();
+        /** @var RequestRepository $requestRepository */
+        $requestRepository->registerRequest(
+            $queryIdentifier,
+            BreadcrumbsDataProvider::class,
+            [
+                'path' => $value['path'],
+            ]
+        );
+        $result = function () use ($queryIdentifier, $requestRepository) {
+            return $requestRepository->getRequestedData($queryIdentifier);
+        };
+        return $this->valueFactory->create($result);
     }
 }

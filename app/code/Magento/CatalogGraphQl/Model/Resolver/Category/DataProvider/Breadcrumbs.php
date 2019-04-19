@@ -7,52 +7,90 @@ declare(strict_types=1);
 
 namespace Magento\CatalogGraphQl\Model\Resolver\Category\DataProvider;
 
-use Magento\Catalog\Model\ResourceModel\Category\CollectionFactory;
+use Magento\CatalogGraphQl\Model\Resolver\CategoryTree\DataProvider\CategoryAttributeQuery;
+use Magento\Framework\App\ResourceConnection;
+use Magento\Framework\DB\Select;
+use Magento\GraphQl\Model\Query\Resolver\DataProviderInterface;
 
 /**
  * Breadcrumbs data provider
  */
-class Breadcrumbs
+class Breadcrumbs implements DataProviderInterface
 {
     /**
-     * @var CollectionFactory
+     * @var CategoryAttributeQuery
      */
-    private $collectionFactory;
+    private $categoryAttributeQuery;
 
     /**
-     * @param CollectionFactory $collectionFactory
+     * @var ResourceConnection
+     */
+    private $resourceConnection;
+
+    /**
+     * @param CategoryAttributeQuery $categoryAttributeQuery
+     * @param ResourceConnection $resourceConnection
      */
     public function __construct(
-        CollectionFactory $collectionFactory
+        CategoryAttributeQuery $categoryAttributeQuery,
+        ResourceConnection $resourceConnection
     ) {
-        $this->collectionFactory = $collectionFactory;
+        $this->categoryAttributeQuery = $categoryAttributeQuery;
+        $this->resourceConnection = $resourceConnection;
     }
 
     /**
-     * @param string $categoryPath
-     * @return array
+     * @inheritdoc
      */
-    public function getData(string $categoryPath): array
+    public function fetch(array $requests): array
     {
-        $breadcrumbsData = [];
+        $categoryPaths = \array_column($requests, 'path');
 
-        $pathCategoryIds = explode('/', $categoryPath);
-        $parentCategoryIds = array_slice($pathCategoryIds, 2, -1);
-
-        if (count($parentCategoryIds)) {
-            $collection = $this->collectionFactory->create();
-            $collection->addAttributeToSelect(['name', 'url_key']);
-            $collection->addAttributeToFilter('entity_id', $parentCategoryIds);
-
-            foreach ($collection as $category) {
-                $breadcrumbsData[] = [
-                    'category_id' => $category->getId(),
-                    'category_name' => $category->getName(),
-                    'category_level' => $category->getLevel(),
-                    'category_url_key' => $category->getUrlKey(),
-                ];
-            }
+        // retrieve ids from path ignoring first 2 levels and last level: 1/2/3/4 => 3, 1/2/3/4/5 => 3, 4
+        // build path map: 1/2/3/4, 1/2/3/4/5 => [1/2/3/4 => 1/2/3, 1/2/3/4/5 => 1/2/3/4]
+        $entityIds = [];
+        $pathMap = [];
+        foreach ($categoryPaths as $path) {
+            $pathArray = \explode('/', $path);
+            array_pop($pathArray);
+            $pathMap[$path]  = \implode('/', $pathArray);
+            $pathArray = \array_slice($pathArray, 2);
+            $entityIds[] = $pathArray;
         }
-        return $breadcrumbsData;
+
+        $entityIds = \array_unique(\array_merge(...$entityIds));
+
+        $select = $this->categoryAttributeQuery->getQuery($entityIds, ['name', 'url_key']);
+        $union = $select->getPart(Select::SQL_UNION);
+        foreach ($union as $partialSelect) {
+            $partialSelect[0]->columns(['e.path', 'e.level']);
+        }
+
+        $entities = [];
+        $statement = $this->resourceConnection->getConnection()->query($select);
+        while ($row = $statement->fetch()) {
+            $entities[$row['entity_id']]['category_' . $row['attribute_code']] = $row['value'];
+            $entities[$row['entity_id']]['category_id'] = $row['entity_id'];
+            $entities[$row['entity_id']]['category_path'] = $row['path'];
+            $entities[$row['entity_id']]['category_level'] = $row['level'];
+        }
+
+        $categories = [];
+        foreach ($entities as $entity) {
+            $thread = [];
+            $path = \explode('/', $entity['category_path']);
+            $path = \array_slice($path, 2);
+            foreach ($path as $node) {
+                $thread[$node] = $entities[$node];
+            }
+            $categories[$entity['category_path']] = $thread;
+        }
+
+        $output = [];
+        foreach ($requests as $requestIdentifier => $request) {
+            $output[$requestIdentifier] =  $categories[$pathMap[$request['path']]] ?? null;
+        }
+
+        return $output;
     }
 }
