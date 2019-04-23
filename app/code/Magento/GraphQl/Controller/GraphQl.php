@@ -77,7 +77,6 @@ class GraphQl implements FrontControllerInterface
     private $contextFactory;
 
     /**
-     * GraphQl constructor.
      * @param Response $response
      * @param SchemaGeneratorInterface $schemaGenerator
      * @param SerializerInterface $jsonSerializer

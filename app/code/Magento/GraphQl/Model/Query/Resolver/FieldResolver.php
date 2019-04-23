@@ -59,6 +59,6 @@ class FieldResolver
         }
         $result = array_merge(...$result);
 
-        return $result;
+        return \array_unique($result);
     }
 }
