@@ -311,7 +311,10 @@ mutation {
         available_shipping_methods {
           carrier_code
           method_code
-          amount
+          amount {
+            value
+            currency
+          }
         }
       }
     }

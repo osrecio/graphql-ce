@@ -129,7 +129,10 @@ class GetSelectedShippingMethodTest extends GraphQlAbstract
         carrier_code
         method_code
         label
-        amount
+        amount {
+            value
+            currency
+        }
       }
     }
   }

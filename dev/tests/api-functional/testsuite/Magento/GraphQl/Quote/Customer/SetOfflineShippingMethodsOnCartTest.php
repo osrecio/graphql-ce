@@ -89,7 +89,7 @@ class SetOfflineShippingMethodsOnCartTest extends GraphQlAbstract
         self::assertEquals($methodCode, $shippingAddress['selected_shipping_method']['method_code']);
 
         self::assertArrayHasKey('amount', $shippingAddress['selected_shipping_method']);
-        self::assertEquals($amount, $shippingAddress['selected_shipping_method']['amount']);
+        self::assertEquals($amount, $shippingAddress['selected_shipping_method']['amount']['value']);
 
         self::assertArrayHasKey('label', $shippingAddress['selected_shipping_method']);
         self::assertEquals($label, $shippingAddress['selected_shipping_method']['label']);
@@ -136,7 +136,10 @@ mutation {
         selected_shipping_method {
           carrier_code
           method_code
-          amount
+          amount {
+            value
+            currency
+          }
           label
         }
       }
