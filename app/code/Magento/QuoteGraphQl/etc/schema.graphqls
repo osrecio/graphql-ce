@@ -225,7 +225,7 @@ type SelectedShippingMethod {
     carrier_code: String
     method_code: String
     label: String
-    amount: Float
+    amount: Money
 }
 
 type AvailableShippingMethod {
@@ -234,10 +234,10 @@ type AvailableShippingMethod {
     method_code: String!
     method_title: String!
     error_message: String
-    amount: Float!
-    base_amount: Float!
-    price_excl_tax: Float!
-    price_incl_tax: Float!
+    amount: Money!
+    base_amount: Money!
+    price_excl_tax: Money!
+    price_incl_tax: Money!
 }
 
 type AvailablePaymentMethod {
